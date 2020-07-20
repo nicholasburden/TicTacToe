@@ -61,7 +61,7 @@ namespace TicTacToe
                 Clients.Caller.SendAsync("NotValidMove");
                 return;
             }
-            Clients.Group(game.Id).SendAsync("PiecePlaced", row, col, playerMakingTurn.Mark);
+            Clients.Group(game.Id).SendAsync("PiecePlaced", row, col, playerMakingTurn.Id == game.Player1.Id);
             if (gameStatus == GameStatus.Win)
             {
                 Clients.Group(game.Id).SendAsync("Winner", playerMakingTurn);
@@ -144,6 +144,8 @@ namespace TicTacToe
         public async Task<Game> CreateGame(Player firstPlayer, Player secondPlayer)
         {
             Game game = new Game(firstPlayer, secondPlayer);
+            firstPlayer.GameId = game.Id;
+            secondPlayer.GameId = game.Id;
             _games[game.Id] = game;
             await Groups.AddToGroupAsync(firstPlayer.Id, groupName: game.Id);
             await Groups.AddToGroupAsync(secondPlayer.Id, groupName: game.Id);

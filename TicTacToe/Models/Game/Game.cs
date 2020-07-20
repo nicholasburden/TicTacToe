@@ -30,7 +30,7 @@ namespace TicTacToe.Models.Game
         {
             if (IsValid(x,y))
             {
-                _board[x, y] = player.Mark;
+                _board[x, y] = player.Id == Player1.Id ? "X" : "O";
                 WhoseTurn = WhoseTurn.Equals(Player1) ? Player2 : Player1;
                 return CheckWin();
             }

@@ -1,26 +1,36 @@
-﻿@page
-<div class="container">
-    <div class="row">&nbsp;</div>
-    <div class="row">
-        <div class="col-2">Username</div>
-        <div class="col-4"><input type="text" id="username" /></div>
+﻿<div id="register">
+
+
+    <div class="usernameinput" id="usernameinput">
+       
+        Username: <input type="text" id="username" />
+        <br />
+        <input type="button" id="findGame" value="Find Game" />
     </div>
-    <div class="row">&nbsp;</div>
-    <div class="row">
-        <div class="col-6">
-            <input type="button" id="findGame" value="Find Game" />
-        </div>
-    </div>
-</div>
-<div class="row">
-    <div class="col-12">
-        <hr />
+
+    <div class="waitingtext" id="waiting">
     </div>
 </div>
-<div class="row">
-    <div class="col-6">
-        <ul id="messagesList"></ul>
-    </div>
+
+
+
+
+<div class="playingagainst" id="playingAgainst">
 </div>
+
+<div class="board" id="board">
+    
+    <div class="cell" id="11" data-cell></div>
+    <div class="cell" id="12" data-cell></div>
+    <div class="cell" id="13" data-cell></div>
+    <div class="cell" id="21" data-cell></div>
+    <div class="cell" id="22" data-cell></div>
+    <div class="cell" id="23" data-cell></div>
+    <div class="cell" id="31" data-cell></div>
+    <div class="cell" id="32" data-cell></div>
+    <div class="cell" id="33" data-cell></div>
+</div>
+
 <script src="~/js/signalr/dist/browser/signalr.js"></script>
 <script src="~/js/game.js"></script>
+<link rel="stylesheet" href="css/styles.css">
