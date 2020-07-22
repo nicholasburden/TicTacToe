@@ -12,14 +12,13 @@ body {
 }
 
 .board {
-    width: 50vw;
-    height: 50vh;
     display: grid;
-    justify-content: center;
+    justify-content: safe center;
     align-content: center;
     justify-items: center;
     align-items: center;
-    grid-template-columns: repeat(3, auto)
+    grid-template-columns: repeat(3, auto);
+    margin: auto
 }
 
 .cell {

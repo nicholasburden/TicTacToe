@@ -51,30 +51,21 @@ namespace TicTacToe
             Player playerMakingTurn = GetPlayer(playerId: Context.ConnectionId);
             Player opponent;
             Game game = GetGame(playerMakingTurn, out opponent);
-            if (game == null || !game.WhoseTurn.Equals(playerMakingTurn))
-            {
-                Clients.Caller.SendAsync("NotPlayersTurn");
-            }
             GameStatus gameStatus = game.MakeMove(playerMakingTurn, row, col);
-            if(gameStatus == GameStatus.InvalidMove)
-            {
-                Clients.Caller.SendAsync("NotValidMove");
-                return;
-            }
-            Clients.Group(game.Id).SendAsync("PiecePlaced", row, col, playerMakingTurn.Id == game.Player1.Id);
+            await Clients.Group(game.Id).SendAsync("PiecePlaced", row, col, playerMakingTurn.Id == game.Player1.Id);
             if (gameStatus == GameStatus.Win)
             {
-                Clients.Group(game.Id).SendAsync("Winner", playerMakingTurn);
-                RemoveGame(game.Id);
+                await Clients.Group(game.Id).SendAsync("Winner", playerMakingTurn);
+                await RemoveGame(game.Id);
             }
             else if (gameStatus == GameStatus.Tie)
             {
-                Clients.Group(game.Id).SendAsync("Tie");
-                RemoveGame(game.Id);
+                await Clients.Group(game.Id).SendAsync("Tie");
+                await RemoveGame(game.Id);
             }
             else
             {
-                Clients.Group(game.Id).SendAsync("UpdateTurn", game);
+                await Clients.Group(game.Id).SendAsync("UpdateTurn");
             }
         }
         private Player CreatePlayer(string username, string connectionId)
@@ -121,7 +112,7 @@ namespace TicTacToe
         {
             // Remove the game
             Game foundGame;
-            if (_games.TryRemove(gameId, out foundGame))
+            if (!_games.TryRemove(gameId, out foundGame))
             {
                 throw new InvalidOperationException("Game not found.");
             }

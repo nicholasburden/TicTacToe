@@ -1,8 +1,33 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
-}
+﻿<head>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css">
+</head>
+<h1 style="text-align:center;">Tic-Tac-Toe</h1>
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<form>
+    <div class="form-group">
+        <input class="form-control" id="usernameInput" placeholder="Username">
+    </div>
+    <div style="text-align:center;"><button type="submit" class="btn btn-primary" id="findGame">Find Game</button></div>
+    <p class="form-text text-muted" id="helpBlock" style="text-align:center;">Please enter your desired username.</p>
+</form>
+
+<div class="board" id="board" style="display: none;">
+    <div class="cell" id="00" data-cell></div>
+    <div class="cell" id="01" data-cell></div>
+    <div class="cell" id="02" data-cell></div>
+    <div class="cell" id="10" data-cell></div>
+    <div class="cell" id="11" data-cell></div>
+    <div class="cell" id="12" data-cell></div>
+    <div class="cell" id="20" data-cell></div>
+    <div class="cell" id="21" data-cell></div>
+    <div class="cell" id="22" data-cell></div>
 </div>
+
+<div class="result" id="result">
+</div>
+
+<script src="~/lib/jquery/jquery.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.js"></script>
+<script src="~/js/signalr/dist/browser/signalr.js"></script>
+<script src="~/js/game.js"></script>

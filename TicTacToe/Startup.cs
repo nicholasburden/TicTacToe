@@ -49,7 +49,7 @@ namespace TicTacToe
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=TicTacToe}/{action=Play}/{id?}");
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapHub<GameHub>("/gameHub");
             });
         }
