@@ -1,40 +1,35 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
+using TicTacToe.Migrations;
+using TicTacToe.Models;
 using TicTacToe.Models.Game;
 
 namespace TicTacToe
 {
     public class GameHub : Hub
     {
-        private static readonly ConcurrentDictionary<string, Player> _players =
-            new ConcurrentDictionary<string, Player>(StringComparer.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// A reference to all games. Key is the group name of the game.
-        /// Note that this collection uses a concurrent dictionary to handle multiple threads.
-        /// </summary>
-        private static readonly ConcurrentDictionary<string, Game> _games =
-            new ConcurrentDictionary<string, Game>(StringComparer.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// A queue of players that are waiting for an opponent.
-        /// </summary>
-        private static readonly ConcurrentQueue<Player> _waitingPlayers =
-            new ConcurrentQueue<Player>();
+        private readonly ApplicationDbContext _dbContext;
+        public GameHub(ApplicationDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
         public async Task FindGame(string username)
         {
             Player joiningPlayer =
-                CreatePlayer(username, Context.ConnectionId);
+                GameState.CreatePlayer(username, Context.ConnectionId);
             await Clients.Caller.SendAsync("PlayerJoined", joiningPlayer);
+
+            await AddUserToDb(username);
             // Find any pending games if any
-            Player opponent = GetWaitingOpponent();
+            Player opponent = GameState.GetWaitingOpponent();
             if (opponent == null)
             {
                 // No waiting players so enter the waiting pool
-                AddToWaitingPool(joiningPlayer);
+                GameState.AddToWaitingPool(joiningPlayer);
                 await Clients.Caller.SendAsync("WaitingList");
             }
             else
@@ -48,117 +43,74 @@ namespace TicTacToe
 
         public async Task PlacePiece(int row, int col)
         {
-            Player playerMakingTurn = GetPlayer(playerId: Context.ConnectionId);
+            Player playerMakingTurn = GameState.GetPlayer(playerId: Context.ConnectionId);
             Player opponent;
-            Game game = GetGame(playerMakingTurn, out opponent);
+            Game game = GameState.GetGame(playerMakingTurn, out opponent);
             GameStatus gameStatus = game.MakeMove(playerMakingTurn, row, col);
             await Clients.Group(game.Id).SendAsync("PiecePlaced", row, col, playerMakingTurn.Id == game.Player1.Id);
             if (gameStatus == GameStatus.Win)
             {
                 await Clients.Group(game.Id).SendAsync("Winner", playerMakingTurn);
-                await RemoveGame(game.Id);
+                GameState.RemoveGame(game.Id);
             }
             else if (gameStatus == GameStatus.Tie)
             {
                 await Clients.Group(game.Id).SendAsync("Tie");
-                await RemoveGame(game.Id);
+                GameState.RemoveGame(game.Id);
             }
             else
             {
                 await Clients.Group(game.Id).SendAsync("UpdateTurn");
             }
         }
-        private Player CreatePlayer(string username, string connectionId)
-        {
-            var player = new Player(username, connectionId);
-            _players[connectionId] = player;
-            return player;
-        }
 
-        private Player GetPlayer(string playerId)
-        {
-            Player foundPlayer;
-            if (!_players.TryGetValue(playerId, out foundPlayer))
-            {
-                return null;
-            }
-            return foundPlayer;
-        }
-
-        private Game GetGame(Player player, out Player opponent)
-        {
-            opponent = null;
-            Game foundGame = _games.Values.FirstOrDefault(g => g.Id == player.GameId);
-            if (foundGame == null) return null;
-            opponent = (player.Id == foundGame.Player1.Id) ?
-                foundGame.Player2 :
-                foundGame.Player1;
-            return foundGame;
-        }
-
-        private Player GetWaitingOpponent()
-        {
-            Player foundPlayer;
-            if (!_waitingPlayers.TryDequeue(out foundPlayer))
-            {
-                return null;
-            }
-
-            return foundPlayer;
-
-        }
-
-        public async Task RemoveGame(string gameId)
-        {
-            // Remove the game
-            Game foundGame;
-            if (!_games.TryRemove(gameId, out foundGame))
-            {
-                throw new InvalidOperationException("Game not found.");
-            }
-
-            // Remove the players, best effort
-            Player foundPlayer;
-            _players.TryRemove(foundGame.Player1.Id, out foundPlayer);
-            _players.TryRemove(foundGame.Player2.Id, out foundPlayer);
-        }
-
-        public async Task AddToWaitingPool(Player player)
-        {
-            _waitingPlayers.Enqueue(player);
-        }
-        public bool IsUsernameTaken(string username)
-        {
-            return _players.Values.FirstOrDefault(player => player.Name.Equals(username, StringComparison.InvariantCultureIgnoreCase)) != null;
-        }
-
-        public async Task<Game> CreateGame(Player firstPlayer, Player secondPlayer)
+      public async Task<Game> CreateGame(Player firstPlayer, Player secondPlayer)
         {
             Game game = new Game(firstPlayer, secondPlayer);
             firstPlayer.GameId = game.Id;
             secondPlayer.GameId = game.Id;
-            _games[game.Id] = game;
+            GameState.AddGame(game);
             await Groups.AddToGroupAsync(firstPlayer.Id, groupName: game.Id);
             await Groups.AddToGroupAsync(secondPlayer.Id, groupName: game.Id);
             return game;
         }
         public override async Task OnDisconnectedAsync(Exception exception)
         {
-            Player leavingPlayer = GetPlayer(playerId: Context.ConnectionId);
+            Player leavingPlayer = GameState.GetPlayer(playerId: Context.ConnectionId);
 
             // Only handle cases where user was a player in a game or waiting for an opponent
             if (leavingPlayer != null)
             {
                 Player opponent;
-                Game ongoingGame = GetGame(leavingPlayer, out opponent);
+                Game ongoingGame = GameState.GetGame(leavingPlayer, out opponent);
                 if (ongoingGame != null)
                 {
                     await Clients.Group(ongoingGame.Id).SendAsync("OpponentLeft");
-                    RemoveGame(ongoingGame.Id);
+                    GameState.RemoveGame(ongoingGame.Id);
                 }
             }
 
             await base.OnDisconnectedAsync(exception);
+        }
+
+        public async Task ChangeElo(string winner, string loser)
+        {
+            User winnerFromDb = await _dbContext.FindAsync<User>(winner);
+            User loserFromDb = await _dbContext.FindAsync<User>(loser);
+            winnerFromDb.Elo += 1;
+            loserFromDb.Elo -= 1;
+            _dbContext.Update(winnerFromDb);
+            _dbContext.Update(loserFromDb);
+            await _dbContext.SaveChangesAsync();
+        }
+
+        private async Task AddUserToDb(string username)
+        {
+            User existingUser = await _dbContext.FindAsync<User>(username);
+            if (existingUser == null){
+                _dbContext.Add(new User(username, 1600));
+                await _dbContext.SaveChangesAsync();
+            }
         }
     }
 }

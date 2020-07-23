@@ -1,25 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using TicTacToe.Models;
+using System;
+using TicTacToe.Models.Game;
+using System.Threading.Tasks;
 
 namespace TicTacToe.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-
-        public HomeController(ILogger<HomeController> logger)
+        private readonly IHubContext<GameHub> _gameHubContext;
+        public HomeController(ILogger<HomeController> logger, IHubContext<GameHub> gameHubContext)
         {
             _logger = logger;
+            _gameHubContext = gameHubContext;
         }
 
         public IActionResult Index()
         {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Index(string username)
+        {
+            
             return View();
         }
 

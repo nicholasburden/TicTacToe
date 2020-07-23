@@ -8,6 +8,8 @@ var playerId;
 var whoseTurn;
 var playerOne;
 var playerTwo;
+var them;
+var me;
 const X_CLASS = 'x'
 const CIRCLE_CLASS = 'circle'
 board.style.display = "none";
@@ -29,15 +31,18 @@ findGame.addEventListener("click", function (event) {
 
 
 connection.on("PlayerJoined", function (player) {
+    me = player
     playerId = player.id;
     findGame.disabled = true;
     helpBlock.innerHTML = "Waiting for opponent";
 });
 
 connection.on("NewGame", function (game) {
+    
     whoseTurn = game.whoseTurn
     playerOne = game.player1;
     playerTwo = game.player2;
+    them = playerId == playerOne.id ? playerTwo : playerOne
     statusMessage = "You are playing against " + getOpponent(game).name + "<br />"
     helpBlock.innerHTML = statusMessage
     var turnMessage = whoseTurn.id == playerId ? "Your turn" : whoseTurn.name + "'s turn"
@@ -66,16 +71,24 @@ connection.on("Winner", function (player) {
     finishGame()
     if (player.id == playerId) {
         helpBlock.innerHTML = "Congratulations! <br /> You Won!"
+        connection.invoke("ChangeElo", me.name, them.name).catch(function (err) {
+            return console.error(err.toString());
+        });
     }
     else {
         helpBlock.innerHTML = "Unlucky! <br /> " + player.name + " won!"
+        connection.invoke("ChangeElo", them.name, me.name).catch(function (err) {
+            return console.error(err.toString());
+        });
     }
+
     
 });
 
 connection.on("Tie", function (player) {
     finishGame()
     helpBlock.innerHTML = "Nearly! <br /> It's a tie!"
+    connection.invoke("ChangeElo", me.name, them.name)
 });
 
 function getOpponent(game) {
