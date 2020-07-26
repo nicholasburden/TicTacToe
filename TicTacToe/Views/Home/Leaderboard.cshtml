@@ -1,0 +1,15 @@
+﻿@model User
+<h1>Leaderboard</h1>
+<table>
+    <tr>
+        <th>Username</th>
+        <th>Elo</th>
+    </tr>
+    @foreach(var item in ViewBag.Users)
+    {
+        <tr>
+            <td>@item.Username</td>
+            <td>@item.Elo</td>
+        </tr>
+    }
+</table>

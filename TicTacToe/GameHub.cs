@@ -12,6 +12,7 @@ namespace TicTacToe
 {
     public class GameHub : Hub
     {
+        private const int ELO_ADJUSTMENT_RATE = 30;
         private readonly ApplicationDbContext _dbContext;
         public GameHub(ApplicationDbContext dbContext)
         {
@@ -93,15 +94,19 @@ namespace TicTacToe
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task ChangeElo(string winner, string loser)
+        public async Task ChangeElo(string me, string them, bool iWon, bool tie)
         {
-            User winnerFromDb = await _dbContext.FindAsync<User>(winner);
-            User loserFromDb = await _dbContext.FindAsync<User>(loser);
-            winnerFromDb.Elo += 1;
-            loserFromDb.Elo -= 1;
-            _dbContext.Update(winnerFromDb);
-            _dbContext.Update(loserFromDb);
+            User meFromDb = await _dbContext.FindAsync<User>(me);
+            User themFromDb = await _dbContext.FindAsync<User>(them);
+            int winnerElo = iWon ? meFromDb.Elo : themFromDb.Elo;
+            int loserElo = iWon ? themFromDb.Elo : meFromDb.Elo;
+            (int, int) newElos = CalculateNewElos(winnerElo, loserElo, tie);
+            var myNewElo = iWon ? newElos.Item1 : newElos.Item2;
+            var increase = myNewElo - meFromDb.Elo;
+            meFromDb.Elo = myNewElo;
+            _dbContext.Update(meFromDb);
             await _dbContext.SaveChangesAsync();
+            await Clients.Caller.SendAsync("UpdateElo", myNewElo, increase);
         }
 
         private async Task AddUserToDb(string username)
@@ -111,6 +116,17 @@ namespace TicTacToe
                 _dbContext.Add(new User(username, 1600));
                 await _dbContext.SaveChangesAsync();
             }
+        }
+
+        private (int, int) CalculateNewElos(int winner, int loser, bool tie)
+        {
+            var actual1 = tie ? 0.5 : 1;
+            var actual2 = tie ? 0.5 : 0;
+            double p1 = (1.0 / (1.0 + Math.Pow(10, ((loser - winner) / 400))));
+            double p2 = (1.0 / (1.0 + Math.Pow(10, ((winner - loser) / 400))));
+            int newWinner = (int)(winner + (ELO_ADJUSTMENT_RATE * (actual1 - p1)));
+            int newLoser = (int)(loser + (ELO_ADJUSTMENT_RATE * (actual2 - p2)));
+            return (newWinner, newLoser);
         }
     }
 }

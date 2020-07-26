@@ -12,11 +12,11 @@ namespace TicTacToe.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly IHubContext<GameHub> _gameHubContext;
-        public HomeController(ILogger<HomeController> logger, IHubContext<GameHub> gameHubContext)
+        private readonly ApplicationDbContext _dbContext;
+        public HomeController(ILogger<HomeController> logger, ApplicationDbContext dbContext)
         {
             _logger = logger;
-            _gameHubContext = gameHubContext;
+            _dbContext = dbContext;
         }
 
         public IActionResult Index()
@@ -24,15 +24,9 @@ namespace TicTacToe.Controllers
             return View();
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Index(string username)
+        public IActionResult Leaderboard()
         {
-            
-            return View();
-        }
-
-        public IActionResult Privacy()
-        {
+            ViewBag.Users = _dbContext.Users;
             return View();
         }
 

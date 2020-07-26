@@ -70,14 +70,14 @@ connection.on("UpdateTurn", function () {
 connection.on("Winner", function (player) {
     finishGame()
     if (player.id == playerId) {
-        helpBlock.innerHTML = "Congratulations! <br /> You Won!"
-        connection.invoke("ChangeElo", me.name, them.name).catch(function (err) {
+        helpBlock.innerHTML = "Congratulations! <br /> You Won!<br />"
+        connection.invoke("ChangeElo", me.name, them.name, true, false).catch(function (err) {
             return console.error(err.toString());
         });
     }
     else {
-        helpBlock.innerHTML = "Unlucky! <br /> " + player.name + " won!"
-        connection.invoke("ChangeElo", them.name, me.name).catch(function (err) {
+        helpBlock.innerHTML = "Unlucky! <br /> " + player.name + " won!<br />"
+        connection.invoke("ChangeElo", me.name, them.name, false, false).catch(function (err) {
             return console.error(err.toString());
         });
     }
@@ -87,8 +87,12 @@ connection.on("Winner", function (player) {
 
 connection.on("Tie", function (player) {
     finishGame()
-    helpBlock.innerHTML = "Nearly! <br /> It's a tie!"
-    connection.invoke("ChangeElo", me.name, them.name)
+    helpBlock.innerHTML = "Nearly! <br /> It's a tie! <br />"
+    connection.invoke("ChangeElo", me.name, them.name, true, true)
+});
+
+connection.on("UpdateElo", function (newElo, increase) {
+    helpBlock.innerHTML += "Your ELO changed by " + increase + " and is now " + newElo + "<br />"
 });
 
 function getOpponent(game) {
